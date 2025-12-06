@@ -18,31 +18,63 @@ const defaultProfile = {
   imageUrl: ''
 };
 
+const defaultRegisterForm = {
+  fullName: '',
+  email: '',
+  password: '',
+  age: '',
+  gender: 'Woman',
+  city: ''
+};
+
+const defaultLoginForm = {
+  email: '',
+  password: ''
+};
+
 function App() {
-  const [authMode, setAuthMode] = useState('login');
-  const [authForm, setAuthForm] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    age: '',
-    gender: 'Woman',
-    city: ''
-  });
+  const [route, setRoute] = useState(window.location.pathname);
+  const [registerForm, setRegisterForm] = useState(defaultRegisterForm);
+  const [loginForm, setLoginForm] = useState(defaultLoginForm);
   const [currentUser, setCurrentUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [profileForm, setProfileForm] = useState(defaultProfile);
-  const [status, setStatus] = useState('');
-  const [error, setError] = useState('');
+  const [authStatus, setAuthStatus] = useState('');
+  const [profileStatus, setProfileStatus] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [profileError, setProfileError] = useState('');
+
+  useEffect(() => {
+    const handlePopState = () => setRoute(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     if (profile) {
-      setProfileForm({ ...defaultProfile, ...Object.fromEntries(Object.entries(profile).filter(([key]) => key in defaultProfile)) });
+      setProfileForm({
+        ...defaultProfile,
+        ...Object.fromEntries(
+          Object.entries(profile).filter(([key]) => key in defaultProfile)
+        )
+      });
     }
   }, [profile]);
 
-  const handleAuthChange = (e) => {
+  const navigate = (path) => {
+    if (path === route) return;
+    window.history.pushState({}, '', path);
+    setRoute(path);
+  };
+
+  const handleRegisterChange = (e) => {
     const { name, value } = e.target;
-    setAuthForm((prev) => ({ ...prev, [name]: value }));
+    setRegisterForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLoginChange = (e) => {
+    const { name, value } = e.target;
+    setLoginForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleProfileChange = (e) => {
@@ -50,29 +82,22 @@ function App() {
     setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const submitAuth = async (type) => {
-    setError('');
-    setStatus('');
-    const endpoint = type === 'register' ? '/api/auth/register' : '/api/auth/login';
-    const payload = type === 'register'
-      ? {
-          fullName: authForm.fullName,
-          email: authForm.email,
-          password: authForm.password,
-          age: authForm.age ? Number(authForm.age) : undefined,
-          gender: authForm.gender,
-          city: authForm.city
-        }
-      : {
-          email: authForm.email,
-          password: authForm.password
-        };
+  const registerUser = async () => {
+    setAuthError('');
+    setAuthStatus('');
 
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          fullName: registerForm.fullName,
+          email: registerForm.email,
+          password: registerForm.password,
+          age: registerForm.age ? Number(registerForm.age) : undefined,
+          gender: registerForm.gender,
+          city: registerForm.city
+        })
       });
 
       const data = await res.json();
@@ -82,16 +107,45 @@ function App() {
 
       setCurrentUser(data.user);
       setProfile(data.profile);
-      setStatus(type === 'register' ? 'Profile created! You are now signed in.' : 'Logged in successfully.');
+      setAuthStatus('Profile created! You are now signed in.');
+      navigate('/profile');
     } catch (err) {
-      setError(err.message);
+      setAuthError(err.message);
+    }
+  };
+
+  const loginUser = async () => {
+    setAuthError('');
+    setAuthStatus('');
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: loginForm.email,
+          password: loginForm.password
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Something went wrong');
+      }
+
+      setCurrentUser(data.user);
+      setProfile(data.profile);
+      setAuthStatus('Logged in successfully.');
+      navigate('/profile');
+    } catch (err) {
+      setAuthError(err.message);
     }
   };
 
   const saveProfile = async () => {
     if (!currentUser) return;
-    setError('');
-    setStatus('');
+    setProfileError('');
+    setProfileStatus('');
 
     try {
       const res = await fetch(`/api/profile/${currentUser.id}`, {
@@ -102,467 +156,612 @@ function App() {
           age: profileForm.age ? Number(profileForm.age) : null
         })
       });
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to save profile');
       }
+
       setProfile(data.profile);
-      setStatus('Profile saved successfully.');
+      setProfileStatus('Profile saved successfully.');
     } catch (err) {
-      setError(err.message);
+      setProfileError(err.message);
     }
   };
 
   const profileBadges = useMemo(() => {
     if (!profile) return [];
-    return [
-      profile.height && `${profile.height} Height`,
-      profile.religion,
-      profile.occupation
-    ].filter(Boolean);
+    return [profile.height && `${profile.height} Height`, profile.religion, profile.occupation].filter(Boolean);
   }, [profile]);
 
   return (
     <div className="bg-gray-50 min-h-screen text-gray-800">
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex-shrink-0 flex items-center gap-2">
-              <i className="fa-solid fa-heart text-rose-500 text-2xl"></i>
-              <span className="font-bold text-xl text-gray-900">BetterMatch</span>
-            </div>
-            <div className="hidden md:flex space-x-8">
-              <a href="#profiles" className="text-gray-600 hover:text-rose-500">Success Stories</a>
-              <a href="#builder" className="text-gray-600 hover:text-rose-500">Create Profile</a>
-              <a href="#cta" className="text-gray-600 hover:text-rose-500">Plans</a>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                className="text-gray-600 hover:text-gray-900 font-medium"
-                onClick={() => setAuthMode('login')}
-              >
-                Login
-              </button>
-              <button
-                className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
-                onClick={() => setAuthMode('register')}
-              >
-                Free Register
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar
+        currentUser={currentUser}
+        onNavigateHome={() => navigate('/')}
+        onNavigateProfile={() => navigate('/profile')}
+      />
 
-      <header className="relative bg-white overflow-hidden" id="cta">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-            <main className="mt-10 mx-auto max-w-7xl px-4 sm:mt-12 sm:px-6 md:mt-16 lg:mt-20 lg:px-8 xl:mt-28">
-              <div className="sm:text-center lg:text-left">
-                <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
-                  <span className="block xl:inline">Trusted by millions</span>{' '}
-                  <span className="block text-rose-500 xl:inline">to find love forever.</span>
-                </h1>
-                <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-lg sm:max-w-xl sm:mx-auto md:mt-5 md:text-xl lg:mx-0">
-                  The most user-friendly matchmaking service. Verified profiles, strict privacy controls, and AI-powered matching.
-                </p>
-                <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:justify-start sm:items-center">
-                  <button
-                    onClick={() => setAuthMode('register')}
-                    className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-lg shadow-md font-semibold"
-                  >
-                    Start Free
-                  </button>
-                  {profile?.city && (
-                    <p className="text-gray-600 text-sm">Recently joined: {profile.city}</p>
-                  )}
-                </div>
-              </div>
-            </main>
-          </div>
+      {route === '/profile' ? (
+        <ProfilePage
+          currentUser={currentUser}
+          profile={profile}
+          profileForm={profileForm}
+          onProfileChange={handleProfileChange}
+          onSaveProfile={saveProfile}
+          profileBadges={profileBadges}
+          status={profileStatus}
+          error={profileError}
+          onNavigateHome={() => navigate('/')}
+        />
+      ) : (
+        <LandingPage
+          registerForm={registerForm}
+          loginForm={loginForm}
+          onRegisterChange={handleRegisterChange}
+          onLoginChange={handleLoginChange}
+          onRegister={registerUser}
+          onLogin={loginUser}
+          status={authStatus}
+          error={authError}
+          currentUser={currentUser}
+          onNavigateProfile={() => navigate('/profile')}
+        />
+      )}
+    </div>
+  );
+}
+
+function Navbar({ currentUser, onNavigateHome, onNavigateProfile }) {
+  return (
+    <nav className="bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-40">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <button
+          className="flex items-center gap-2 text-gray-900 font-semibold text-lg"
+          onClick={onNavigateHome}
+        >
+          <i className="fa-solid fa-heart text-rose-500 text-xl"></i>
+          BetterMatch
+        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onNavigateHome}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            Home
+          </button>
+          <button
+            onClick={onNavigateProfile}
+            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+          >
+            Profile
+          </button>
+          {currentUser && (
+            <span className="hidden sm:inline-flex text-xs text-gray-500">
+              Signed in as <span className="ml-1 font-semibold text-gray-800">{currentUser.fullName}</span>
+            </span>
+          )}
         </div>
-        <div className="lg:absolute lg:inset-y-0 lg:right-0 lg:w-1/2">
-          <img
-            className="h-56 w-full object-cover sm:h-72 md:h-96 lg:w-full lg:h-full"
-            src="https://images.unsplash.com/photo-1621621667797-e06afc217fb0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1500&q=80"
-            alt="Happy Couple"
-          />
+      </div>
+    </nav>
+  );
+}
+
+function LandingPage({
+  registerForm,
+  loginForm,
+  onRegisterChange,
+  onLoginChange,
+  onRegister,
+  onLogin,
+  status,
+  error,
+  currentUser,
+  onNavigateProfile
+}) {
+  return (
+    <>
+      <header className="bg-gradient-to-br from-white to-rose-50 border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 py-16 lg:py-20 grid lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-600 text-xs font-semibold">
+              <i className="fa-solid fa-crown"></i>
+              India's modern matrimony experience
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
+              Find your person with privacy-first, trusted matchmaking.
+            </h1>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Create a beautiful profile in minutes, explore verified members, and chat securely. Designed to feel warm, simple, and focused on what matters.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onRegister}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-rose-200 font-semibold"
+              >
+                Start free
+              </button>
+              {currentUser ? (
+                <button
+                  onClick={onNavigateProfile}
+                  className="px-6 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold hover:border-gray-300"
+                >
+                  Go to your profile
+                </button>
+              ) : (
+                <button
+                  onClick={onLogin}
+                  className="px-6 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold hover:border-gray-300"
+                >
+                  Quick login
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl">
+                <i className="fa-solid fa-shield-heart"></i>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Better profiles, better matches</p>
+                <p className="text-sm text-gray-500">Private by design, verified by humans.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+              <FeatureChip icon="fa-solid fa-badge-check" label="Profile verification" />
+              <FeatureChip icon="fa-solid fa-user-shield" label="Privacy controls" />
+              <FeatureChip icon="fa-solid fa-comments" label="Secure chat" />
+              <FeatureChip icon="fa-solid fa-heart" label="Curated matches" />
+            </div>
+            <div className="rounded-xl border border-gray-100 bg-rose-50 text-rose-700 text-sm p-4">
+              "The cleanest experience we've tried—easy signup, quick responses, and respectful members."
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <section className="relative -mt-12 z-20" id="builder">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-xl p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-700">Create your profile</h3>
-                <span className="text-xs text-rose-500 font-semibold">Secure & private</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={authForm.fullName}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Ananya S"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={authForm.email}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="you@example.com"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={authForm.password}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">City</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={authForm.city}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Bangalore, India"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">Age</label>
-                  <input
-                    type="number"
-                    name="age"
-                    value={authForm.age}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="26"
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-xs text-gray-500 mb-1">Gender</label>
-                  <select
-                    name="gender"
-                    value={authForm.gender}
-                    onChange={handleAuthChange}
-                    className="border rounded-md p-2 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                  >
-                    <option>Woman</option>
-                    <option>Man</option>
-                    <option>Non-binary</option>
-                  </select>
-                </div>
-              </div>
+      <main className="max-w-6xl mx-auto px-4 py-12 space-y-10">
+        <div className="grid md:grid-cols-2 gap-6">
+          <AuthCard
+            title="Create your profile"
+            description="Share a few details to get personalized matches."
+            actionLabel="Create & join"
+            onSubmit={onRegister}
+            status={status}
+            error={error}
+          >
+            <RegisterForm form={registerForm} onChange={onRegisterChange} />
+          </AuthCard>
 
-              <div className="flex flex-wrap gap-3 mt-4">
-                <button
-                  onClick={() => {
-                    setAuthMode('register');
-                    submitAuth('register');
-                  }}
-                  className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-lg shadow transition"
-                >
-                  Create & Save Profile
-                </button>
-                <button
-                  onClick={() => {
-                    setAuthMode('login');
-                    submitAuth('login');
-                  }}
-                  className="border border-rose-500 text-rose-500 px-4 py-2 rounded-lg hover:bg-rose-50 transition"
-                >
-                  Login to Existing Profile
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">Mode: {authMode === 'register' ? 'Create a new profile' : 'Access existing profile'}</p>
-              {status && <p className="text-green-600 text-sm mt-3">{status}</p>}
-              {error && <p className="text-rose-600 text-sm mt-1">{error}</p>}
-            </div>
+          <AuthCard
+            title="Welcome back"
+            description="Log in securely to continue conversations and manage matches."
+            actionLabel="Login"
+            onSubmit={onLogin}
+            status={status}
+            error={error}
+          >
+            <LoginForm form={loginForm} onChange={onLoginChange} />
+          </AuthCard>
+        </div>
 
-            <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">Why Choose BetterMatch?</h3>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li className="flex gap-3 items-start">
-                  <span className="w-8 h-8 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center"><i className="fa-solid fa-shield-halved"></i></span>
-                  <p>100% verified profiles with privacy-first controls.</p>
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="w-8 h-8 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center"><i className="fa-solid fa-lock"></i></span>
-                  <p>AI-powered matching to surface compatible partners.</p>
-                </li>
-                <li className="flex gap-3 items-start">
-                  <span className="w-8 h-8 rounded-full bg-green-100 text-green-500 flex items-center justify-center"><i className="fa-solid fa-comments"></i></span>
-                  <p>Secure chat that keeps your contact details safe.</p>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="profiles">
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <div className="relative">
-                <img
-                  src={profile?.imageUrl || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'}
-                  alt="Profile"
-                  className="w-full h-80 object-cover"
-                />
-                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
-                  <h2 className="text-white text-2xl font-bold">
-                    {profile?.user?.fullName || currentUser?.fullName || 'Your name here'}, {profile?.age || authForm.age || '--'}
-                  </h2>
-                  <p className="text-gray-200 text-sm">{profile?.city || authForm.city || 'Add your city'}</p>
-                </div>
-              </div>
-
-              <div className="p-6 text-center">
-                <p className="text-sm text-gray-500 mb-4">Last active: {profile ? 'Just now' : '—'}</p>
-                <div className="flex gap-3 justify-center mb-6">
-                  <button className="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 rounded-lg font-semibold shadow-md transition">
-                    <i className="fa-solid fa-check mr-2"></i> Connect
-                  </button>
-                  <button className="w-12 h-12 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:text-rose-500 hover:border-rose-500 transition">
-                    <i className="fa-solid fa-star"></i>
-                  </button>
-                  <button className="w-12 h-12 flex items-center justify-center border border-gray-300 rounded-lg text-gray-600 hover:text-gray-900 transition">
-                    <i className="fa-solid fa-comment-dots"></i>
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {profileBadges.length === 0 && <span className="text-gray-400 text-xs">Add details to see highlights</span>}
-                  {profileBadges.map((badge) => (
-                    <span key={badge} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Profile Details</h3>
-                <button
-                  onClick={saveProfile}
-                  disabled={!currentUser}
-                  className="bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-rose-600 text-white px-4 py-2 rounded-lg shadow"
-                >
-                  Save Details
-                </button>
-              </div>
-              {!currentUser && (
-                <p className="text-sm text-rose-500 mb-4">Login or create an account to save your profile.</p>
-              )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col text-sm text-gray-600">
-                  About Me
-                  <textarea
-                    name="about"
-                    value={profileForm.about}
-                    onChange={handleProfileChange}
-                    rows={3}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Share a few lines about yourself"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Education
-                  <input
-                    name="education"
-                    value={profileForm.education}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Masters in Computer Science"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Occupation
-                  <input
-                    name="occupation"
-                    value={profileForm.occupation}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Senior Software Developer"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Annual Income
-                  <input
-                    name="incomeRange"
-                    value={profileForm.incomeRange}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="25L - 35L"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Height
-                    <input
-                      name="height"
-                      value={profileForm.height}
-                      onChange={handleProfileChange}
-                      className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                      placeholder={"5' 6\""}
-                    />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Religion / Caste
-                  <input
-                    name="religion"
-                    value={profileForm.religion}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Hindu / Brahmin"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Marital Status
-                  <input
-                    name="maritalStatus"
-                    value={profileForm.maritalStatus}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Never Married"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Mother Tongue
-                  <input
-                    name="motherTongue"
-                    value={profileForm.motherTongue}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Hindi"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Eating Habits
-                  <input
-                    name="eatingHabits"
-                    value={profileForm.eatingHabits}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Vegetarian"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Drinking/Smoking
-                  <input
-                    name="drinkingSmoking"
-                    value={profileForm.drinkingSmoking}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="No / No"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Family Details
-                  <textarea
-                    name="familyDetails"
-                    value={profileForm.familyDetails}
-                    onChange={handleProfileChange}
-                    rows={3}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="Share a bit about your family"
-                  />
-                </label>
-                <label className="flex flex-col text-sm text-gray-600">
-                  Profile Photo URL
-                  <input
-                    name="imageUrl"
-                    value={profileForm.imageUrl}
-                    onChange={handleProfileChange}
-                    className="mt-1 border rounded-lg p-3 bg-gray-50 focus:ring-rose-500 focus:border-rose-500"
-                    placeholder="https://..."
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4 border-l-4 border-rose-500 pl-3">About Me</h3>
-              <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-                {profile?.about || 'Share a little about yourself to help members understand your personality and aspirations.'}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6 border-l-4 border-blue-500 pl-3">Personal Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                <InfoItem label="Age" value={profile?.age || '—'} />
-                <InfoItem label="Marital Status" value={profile?.maritalStatus || '—'} />
-                <InfoItem label="Religion / Caste" value={profile?.religion || '—'} />
-                <InfoItem label="Mother Tongue" value={profile?.motherTongue || '—'} />
-                <InfoItem label="Eating Habits" value={profile?.eatingHabits || '—'} />
-                <InfoItem label="Drinking/Smoking" value={profile?.drinkingSmoking || '—'} />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6 border-l-4 border-green-500 pl-3">Education & Career</h3>
-              <div className="space-y-4">
-                <DetailItem
-                  icon="fa-solid fa-graduation-cap"
-                  title={profile?.education || 'Add your education'}
-                  subtitle="Education"
-                />
-                <DetailItem
-                  icon="fa-solid fa-briefcase"
-                  title={profile?.occupation || 'Add your occupation'}
-                  subtitle={`Annual Income: ${profile?.incomeRange || '—'}`}
-                />
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm p-6 sm:p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6 border-l-4 border-yellow-500 pl-3">Family Details</h3>
-              <p className="text-gray-700 whitespace-pre-line">{profile?.familyDetails || 'Tell us about your family background and values.'}</p>
-            </div>
-          </div>
-        </section>
+        <div className="grid md:grid-cols-3 gap-4">
+          <HighlightCard icon="fa-solid fa-lock" title="Safety-first" body="We never show your number or email. Share only when you are ready." />
+          <HighlightCard icon="fa-solid fa-star" title="Quality community" body="Every profile is screened to keep the platform respectful and genuine." />
+          <HighlightCard icon="fa-solid fa-seedling" title="Grows with you" body="Update your story anytime. Your dashboard keeps everything organised." />
+        </div>
       </main>
+    </>
+  );
+}
+
+function ProfilePage({
+  currentUser,
+  profile,
+  profileForm,
+  onProfileChange,
+  onSaveProfile,
+  profileBadges,
+  status,
+  error,
+  onNavigateHome
+}) {
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+          <i className="fa-solid fa-lock"></i>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Sign in to see your profile</h2>
+        <p className="text-gray-600 max-w-xl mx-auto">
+          Create or log in from the landing page to build your profile. Once signed in, you'll return here automatically.
+        </p>
+        <button
+          onClick={onNavigateHome}
+          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600"
+        >
+          Go to landing page
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <p className="text-xs text-gray-500">Signed in as</p>
+          <h2 className="text-2xl font-bold text-gray-900">{currentUser.fullName}</h2>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onNavigateHome}
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+          >
+            Back to landing
+          </button>
+          <button
+            onClick={onSaveProfile}
+            className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600"
+          >
+            Save profile
+          </button>
+        </div>
+      </div>
+
+      {status && <p className="text-green-600 text-sm">{status}</p>}
+      {error && <p className="text-rose-600 text-sm">{error}</p>}
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <ProfilePreview
+          currentUser={currentUser}
+          profile={profile}
+          profileBadges={profileBadges}
+        />
+
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Tell your story</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                label="About you"
+                name="about"
+                as="textarea"
+                rows={3}
+                placeholder="Share a few lines about yourself"
+                value={profileForm.about}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Education"
+                name="education"
+                placeholder="Masters in Computer Science"
+                value={profileForm.education}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Occupation"
+                name="occupation"
+                placeholder="Product Designer"
+                value={profileForm.occupation}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Income range"
+                name="incomeRange"
+                placeholder="25L - 35L"
+                value={profileForm.incomeRange}
+                onChange={onProfileChange}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Basics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                label="Age"
+                type="number"
+                name="age"
+                placeholder="26"
+                value={profileForm.age}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="City"
+                name="city"
+                placeholder="Bangalore, India"
+                value={profileForm.city}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Height"
+                name="height"
+                placeholder={"5' 6\""}
+                value={profileForm.height}
+                onChange={onProfileChange}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                label="Gender"
+                name="gender"
+                as="select"
+                options={["Woman", "Man", "Non-binary"]}
+                value={profileForm.gender}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Marital status"
+                name="maritalStatus"
+                placeholder="Never Married"
+                value={profileForm.maritalStatus}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Religion / Caste"
+                name="religion"
+                placeholder="Hindu / Brahmin"
+                value={profileForm.religion}
+                onChange={onProfileChange}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Lifestyle & family</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                label="Mother tongue"
+                name="motherTongue"
+                placeholder="Hindi"
+                value={profileForm.motherTongue}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Eating habits"
+                name="eatingHabits"
+                placeholder="Vegetarian"
+                value={profileForm.eatingHabits}
+                onChange={onProfileChange}
+              />
+              <FormField
+                label="Drinking / Smoking"
+                name="drinkingSmoking"
+                placeholder="No / No"
+                value={profileForm.drinkingSmoking}
+                onChange={onProfileChange}
+              />
+            </div>
+            <FormField
+              label="Family details"
+              name="familyDetails"
+              as="textarea"
+              rows={3}
+              placeholder="Share a bit about your family"
+              value={profileForm.familyDetails}
+              onChange={onProfileChange}
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Profile photo</h3>
+            <FormField
+              label="Photo URL"
+              name="imageUrl"
+              placeholder="https://..."
+              value={profileForm.imageUrl}
+              onChange={onProfileChange}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function InfoItem({ label, value }) {
+function AuthCard({ title, description, children, actionLabel, onSubmit, status, error }) {
   return (
-    <div>
-      <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="font-medium text-gray-800">{value}</p>
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+        <p className="text-sm text-gray-600">{description}</p>
+      </div>
+      <div className="space-y-3">{children}</div>
+      <button
+        onClick={onSubmit}
+        className="w-full inline-flex justify-center items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-3 rounded-xl font-semibold"
+      >
+        {actionLabel}
+      </button>
+      {status && <p className="text-green-600 text-sm">{status}</p>}
+      {error && <p className="text-rose-600 text-sm">{error}</p>}
     </div>
   );
 }
 
-function DetailItem({ icon, title, subtitle }) {
+function RegisterForm({ form, onChange }) {
   return (
-    <div className="flex items-start gap-4">
-      <div className="mt-1 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <FormField
+        label="Full name"
+        name="fullName"
+        placeholder="Ananya S"
+        value={form.fullName}
+        onChange={onChange}
+      />
+      <FormField
+        label="Email"
+        type="email"
+        name="email"
+        placeholder="you@example.com"
+        value={form.email}
+        onChange={onChange}
+      />
+      <FormField
+        label="Password"
+        type="password"
+        name="password"
+        placeholder="••••••••"
+        value={form.password}
+        onChange={onChange}
+      />
+      <FormField
+        label="City"
+        name="city"
+        placeholder="Bangalore, India"
+        value={form.city}
+        onChange={onChange}
+      />
+      <FormField
+        label="Age"
+        type="number"
+        name="age"
+        placeholder="26"
+        value={form.age}
+        onChange={onChange}
+      />
+      <FormField
+        label="Gender"
+        name="gender"
+        as="select"
+        options={["Woman", "Man", "Non-binary"]}
+        value={form.gender}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function LoginForm({ form, onChange }) {
+  return (
+    <div className="space-y-3">
+      <FormField
+        label="Email"
+        type="email"
+        name="email"
+        placeholder="you@example.com"
+        value={form.email}
+        onChange={onChange}
+      />
+      <FormField
+        label="Password"
+        type="password"
+        name="password"
+        placeholder="••••••••"
+        value={form.password}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function ProfilePreview({ currentUser, profile, profileBadges }) {
+  const name = profile?.user?.fullName || currentUser.fullName;
+  const age = profile?.age ?? '';
+  const city = profile?.city || 'Add your city';
+  const image =
+    profile?.imageUrl ||
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80';
+
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+      <div className="relative">
+        <img src={image} alt="Profile" className="w-full h-64 object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute bottom-4 left-4 text-white">
+          <h3 className="text-2xl font-bold">{name}</h3>
+          <p className="text-sm text-gray-200">{city}{age ? ` · ${age}` : ''}</p>
+        </div>
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="flex gap-2 flex-wrap">
+          {profileBadges.length === 0 && (
+            <span className="text-xs text-gray-500">Add details to showcase highlights</span>
+          )}
+          {profileBadges.map((badge) => (
+            <span key={badge} className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+              {badge}
+            </span>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-sm text-gray-700">
+          <InfoPill icon="fa-solid fa-location-dot" label={city} />
+          <InfoPill icon="fa-solid fa-venus-mars" label={profile?.gender || '—'} />
+          <InfoPill icon="fa-solid fa-graduation-cap" label={profile?.education || '—'} />
+          <InfoPill icon="fa-solid fa-briefcase" label={profile?.occupation || '—'} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, name, type = 'text', placeholder, value, onChange, as = 'input', options = [], rows }) {
+  return (
+    <label className="text-sm text-gray-700 flex flex-col gap-1">
+      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+      {as === 'textarea' ? (
+        <textarea
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          rows={rows || 3}
+          onChange={onChange}
+          className="border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+        />
+      ) : as === 'select' ? (
+        <select
+          name={name}
+          value={value}
+          onChange={onChange}
+          className="border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+        >
+          {options.map((option) => (
+            <option key={option}>{option}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className="border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+        />
+      )}
+    </label>
+  );
+}
+
+function HighlightCard({ icon, title, body }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-2">
+      <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
         <i className={icon}></i>
       </div>
-      <div>
-        <p className="font-bold text-gray-800">{title}</p>
-        <p className="text-sm text-gray-500">{subtitle}</p>
-      </div>
+      <h4 className="text-lg font-semibold text-gray-900">{title}</h4>
+      <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
     </div>
+  );
+}
+
+function FeatureChip({ icon, label }) {
+  return (
+    <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-100 text-gray-700 text-sm shadow-sm">
+      <i className={icon}></i>
+      {label}
+    </span>
+  );
+}
+
+function InfoPill({ icon, label }) {
+  return (
+    <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 text-gray-700">
+      <i className={icon}></i>
+      {label}
+    </span>
   );
 }
 
