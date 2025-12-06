@@ -61,11 +61,25 @@ function App() {
     }
   }, [profile]);
 
-  const navigate = (path) => {
+  const navigate = (path, { replace = false } = {}) => {
     if (path === route) return;
-    window.history.pushState({}, '', path);
+    if (replace) {
+      window.history.replaceState({}, '', path);
+    } else {
+      window.history.pushState({}, '', path);
+    }
     setRoute(path);
   };
+
+  useEffect(() => {
+    if (currentUser && route === '/') {
+      navigate('/home', { replace: true });
+    }
+
+    if (!currentUser && route === '/home') {
+      navigate('/', { replace: true });
+    }
+  }, [currentUser, route]);
 
   const handleRegisterChange = (e) => {
     const { name, value } = e.target;
@@ -108,7 +122,7 @@ function App() {
       setCurrentUser(data.user);
       setProfile(data.profile);
       setAuthStatus('Profile created! You are now signed in.');
-      navigate('/profile');
+      navigate('/home');
     } catch (err) {
       setAuthError(err.message);
     }
@@ -136,7 +150,7 @@ function App() {
       setCurrentUser(data.user);
       setProfile(data.profile);
       setAuthStatus('Logged in successfully.');
-      navigate('/profile');
+      navigate('/home');
     } catch (err) {
       setAuthError(err.message);
     }
@@ -178,7 +192,7 @@ function App() {
     <div className="bg-gray-50 min-h-screen text-gray-800">
       <Navbar
         currentUser={currentUser}
-        onNavigateHome={() => navigate('/')}
+        onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
         onNavigateProfile={() => navigate('/profile')}
       />
 
@@ -192,7 +206,14 @@ function App() {
           profileBadges={profileBadges}
           status={profileStatus}
           error={profileError}
-          onNavigateHome={() => navigate('/')}
+          onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
+        />
+      ) : route === '/home' ? (
+        <HomePage
+          currentUser={currentUser}
+          profile={profile}
+          profileBadges={profileBadges}
+          onNavigateProfile={() => navigate('/profile')}
         />
       ) : (
         <LandingPage
@@ -228,7 +249,7 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile }) {
             onClick={onNavigateHome}
             className="text-sm font-medium text-gray-600 hover:text-gray-900"
           >
-            Home
+            {currentUser ? 'Home' : 'Landing'}
           </button>
           <button
             onClick={onNavigateProfile}
@@ -356,6 +377,110 @@ function LandingPage({
   );
 }
 
+function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
+  const completionHints = [
+    { label: 'Add a short bio', done: Boolean(profile?.about) },
+    { label: 'Share your city', done: Boolean(profile?.city) },
+    { label: 'Update career details', done: Boolean(profile?.occupation) }
+  ];
+
+  if (!currentUser) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-2xl">
+          <i className="fa-solid fa-right-to-bracket"></i>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+        <p className="text-gray-600 max-w-xl mx-auto">
+          Sign in from the landing page to access your personalised home. We’ll route you here automatically once you’re in.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm text-gray-500">Welcome,</p>
+          <h1 className="text-3xl font-bold text-gray-900">{currentUser.fullName}</h1>
+          <p className="text-gray-600 mt-2 max-w-2xl">
+            This is your private home base for BetterMatch. Review your story, keep details polished, and move to your profile when you’re ready to meet matches.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onNavigateProfile}
+            className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600"
+          >
+            View your profile
+          </button>
+          <button
+            onClick={onNavigateProfile}
+            className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+          >
+            Update details
+          </button>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <ProfilePreview currentUser={currentUser} profile={profile} profileBadges={profileBadges} />
+
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Profile quality</p>
+                <h3 className="text-lg font-semibold text-gray-900">Keep it professional and complete</h3>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold">Members-first</span>
+            </div>
+            <div className="grid md:grid-cols-3 gap-3">
+              {completionHints.map((hint) => (
+                <div
+                  key={hint.label}
+                  className={`rounded-xl border p-3 text-sm flex items-start gap-3 ${
+                    hint.done ? 'border-green-100 bg-green-50 text-green-700' : 'border-gray-100 bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  <i className={`fa-solid ${hint.done ? 'fa-circle-check' : 'fa-circle'} mt-1`}></i>
+                  <span>{hint.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Next best steps</h3>
+              <button
+                onClick={onNavigateProfile}
+                className="text-sm font-semibold text-rose-600 hover:text-rose-700"
+              >
+                Go to profile
+              </button>
+            </div>
+            <p className="text-gray-600 text-sm">Focus on the actions that help you appear in better recommendations.</p>
+            <div className="grid md:grid-cols-2 gap-3">
+              <ActionCard
+                icon="fa-solid fa-pen"
+                title="Refresh your introduction"
+                body="Keep your 'About you' crisp and warm. Members respond better to thoughtful stories."
+              />
+              <ActionCard
+                icon="fa-solid fa-people-group"
+                title="Highlight family values"
+                body="Share what matters to your family. It builds trust before conversations start."
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ProfilePage({
   currentUser,
   profile,
@@ -375,13 +500,13 @@ function ProfilePage({
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Sign in to see your profile</h2>
         <p className="text-gray-600 max-w-xl mx-auto">
-          Create or log in from the landing page to build your profile. Once signed in, you'll return here automatically.
+          Sign in from the home experience to build your profile. Once signed in, you'll return here automatically.
         </p>
         <button
           onClick={onNavigateHome}
           className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600"
         >
-          Go to landing page
+          Go to home
         </button>
       </div>
     );
@@ -399,7 +524,7 @@ function ProfilePage({
             onClick={onNavigateHome}
             className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300"
           >
-            Back to landing
+            Back to home
           </button>
           <button
             onClick={onSaveProfile}
@@ -743,6 +868,22 @@ function HighlightCard({ icon, title, body }) {
       </div>
       <h4 className="text-lg font-semibold text-gray-900">{title}</h4>
       <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
+function ActionCard({ icon, title, body }) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+      <div className="flex items-start gap-3">
+        <span className="w-10 h-10 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+          <i className={icon}></i>
+        </span>
+        <div className="space-y-1">
+          <p className="font-semibold text-gray-900">{title}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+        </div>
+      </div>
     </div>
   );
 }
