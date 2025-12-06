@@ -1,4 +1,4 @@
-# Fullstack Test
+# matrimony-app
 
 Simple fullstack starter using React (Vite) + Express + Prisma + Postgres. The frontend calls the backend API, which reads sample data from the database.
 
