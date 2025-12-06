@@ -43,6 +43,8 @@ function App() {
   const [profileStatus, setProfileStatus] = useState('');
   const [authError, setAuthError] = useState('');
   const [profileError, setProfileError] = useState('');
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => setRoute(window.location.pathname);
@@ -123,6 +125,7 @@ function App() {
       setProfile(data.profile);
       setAuthStatus('Profile created! You are now signed in.');
       navigate('/home');
+      setShowRegisterModal(false);
     } catch (err) {
       setAuthError(err.message);
     }
@@ -151,9 +154,23 @@ function App() {
       setProfile(data.profile);
       setAuthStatus('Logged in successfully.');
       navigate('/home');
+      setShowLoginModal(false);
     } catch (err) {
       setAuthError(err.message);
     }
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+    setProfile(null);
+    setProfileForm(defaultProfile);
+    setAuthStatus('');
+    setProfileStatus('');
+    setAuthError('');
+    setProfileError('');
+    setRegisterForm(defaultRegisterForm);
+    setLoginForm(defaultLoginForm);
+    navigate('/', { replace: true });
   };
 
   const saveProfile = async () => {
@@ -194,6 +211,9 @@ function App() {
         currentUser={currentUser}
         onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
         onNavigateProfile={() => navigate('/profile')}
+        onOpenRegister={() => setShowRegisterModal(true)}
+        onOpenLogin={() => setShowLoginModal(true)}
+        onLogout={logoutUser}
       />
 
       {route === '/profile' ? (
@@ -227,13 +247,44 @@ function App() {
           error={authError}
           currentUser={currentUser}
           onNavigateProfile={() => navigate('/profile')}
+          onOpenRegister={() => setShowRegisterModal(true)}
+          onOpenLogin={() => setShowLoginModal(true)}
         />
+      )}
+
+      {showRegisterModal && (
+        <Modal
+          title="Create your profile"
+          description="Sign up free to build your story and meet like-minded members."
+          onClose={() => setShowRegisterModal(false)}
+          onSubmit={registerUser}
+          actionLabel="Create account"
+        >
+          <RegisterForm form={registerForm} onChange={handleRegisterChange} />
+        </Modal>
+      )}
+
+      {showLoginModal && (
+        <Modal
+          title="Welcome back"
+          description="Quickly log in to continue conversations and manage matches."
+          onClose={() => setShowLoginModal(false)}
+          onSubmit={loginUser}
+          actionLabel="Login"
+        >
+          <LoginForm form={loginForm} onChange={handleLoginChange} />
+        </Modal>
       )}
     </div>
   );
 }
 
-function Navbar({ currentUser, onNavigateHome, onNavigateProfile }) {
+function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister, onOpenLogin, onLogout }) {
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const toggleMenu = () => setShowProfileMenu((prev) => !prev);
+  const closeMenu = () => setShowProfileMenu(false);
+
   return (
     <nav className="bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -244,25 +295,61 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile }) {
           <i className="fa-solid fa-heart text-rose-500 text-xl"></i>
           BetterMatch
         </button>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onNavigateHome}
-            className="text-sm font-medium text-gray-600 hover:text-gray-900"
-          >
-            {currentUser ? 'Home' : 'Landing'}
-          </button>
-          <button
-            onClick={onNavigateProfile}
-            className="text-sm font-medium text-gray-600 hover:text-gray-900"
-          >
-            Profile
-          </button>
-          {currentUser && (
-            <span className="hidden sm:inline-flex text-xs text-gray-500">
-              Signed in as <span className="ml-1 font-semibold text-gray-800">{currentUser.fullName}</span>
-            </span>
-          )}
-        </div>
+        {currentUser ? (
+          <div className="relative">
+            <button
+              onClick={toggleMenu}
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm hover:border-gray-300"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold">
+                {currentUser.fullName?.charAt(0) || 'P'}
+              </div>
+              <span className="hidden sm:inline">Profile</span>
+              <i className="fa-solid fa-chevron-down text-xs text-gray-500"></i>
+            </button>
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-lg">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-xs text-gray-500">Signed in</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.fullName}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    onNavigateProfile();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  View profile
+                </button>
+                <button
+                  onClick={() => {
+                    closeMenu();
+                    onLogout();
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onOpenLogin}
+              className="text-sm font-semibold text-gray-700 hover:text-gray-900"
+            >
+              Quick login
+            </button>
+            <button
+              onClick={onOpenRegister}
+              className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-600"
+            >
+              Sign up free
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );
@@ -278,7 +365,9 @@ function LandingPage({
   status,
   error,
   currentUser,
-  onNavigateProfile
+  onNavigateProfile,
+  onOpenRegister,
+  onOpenLogin
 }) {
   return (
     <>
@@ -297,7 +386,7 @@ function LandingPage({
             </p>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={onRegister}
+                onClick={onOpenRegister}
                 className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-rose-200 font-semibold"
               >
                 Start free
@@ -311,7 +400,7 @@ function LandingPage({
                 </button>
               ) : (
                 <button
-                  onClick={onLogin}
+                  onClick={onOpenLogin}
                   className="px-6 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold hover:border-gray-300"
                 >
                   Quick login
@@ -392,7 +481,7 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
         <p className="text-gray-600 max-w-xl mx-auto">
-          Sign in from the landing page to access your personalised home. We’ll route you here automatically once you’re in.
+          Sign in from the main experience to access your personalised home. We’ll route you here automatically once you’re in.
         </p>
       </div>
     );
@@ -680,6 +769,46 @@ function ProfilePage({
               onChange={onProfileChange}
             />
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Modal({ title, description, children, onClose, onSubmit, actionLabel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100">
+        <div className="flex items-start justify-between p-6 pb-4">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">{title}</h3>
+            <p className="text-sm text-gray-600 mt-1">{description}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+            aria-label="Close dialog"
+          >
+            <i className="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div className="px-6 pb-2">
+          <div className="space-y-4">{children}</div>
+        </div>
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSubmit}
+            className="px-5 py-2 rounded-lg bg-rose-500 text-white text-sm font-semibold shadow-sm hover:bg-rose-600"
+          >
+            {actionLabel}
+          </button>
         </div>
       </div>
     </div>
