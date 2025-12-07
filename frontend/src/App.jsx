@@ -289,11 +289,14 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
     <nav className="bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <button
-          className="flex items-center gap-2 text-gray-900 font-semibold text-lg"
+          className="flex items-center gap-3 text-gray-900 font-semibold text-lg"
           onClick={onNavigateHome}
         >
-          <i className="fa-solid fa-heart text-rose-500 text-xl"></i>
-          BetterMatch
+          <img
+            src="/public/brand/thadasthu-logo.png"
+            alt="Thadasthu logo"
+            className="h-9 w-auto sm:h-10"
+          />
         </button>
         {currentUser ? (
           <div className="relative">
@@ -494,7 +497,7 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
           <p className="text-sm text-gray-500">Welcome,</p>
           <h1 className="text-3xl font-bold text-gray-900">{currentUser.fullName}</h1>
           <p className="text-gray-600 mt-2 max-w-2xl">
-            This is your private home base for BetterMatch. Review your story, keep details polished, and move to your profile when you’re ready to meet matches.
+            This is your private home base for Thadasthu. Review your story, keep details polished, and move to your profile when you’re ready to meet matches.
           </p>
         </div>
         <div className="flex gap-3">
