@@ -293,10 +293,11 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
           onClick={onNavigateHome}
         >
           <img
-            src="/public/brand/thadasthu-logo.png"
+            src="/public/brand/thadasthu-logo.svg"
             alt="Thadasthu logo"
             className="h-9 w-auto sm:h-10"
           />
+          <span className="text-base sm:text-lg">Thadasthu</span>
         </button>
         {currentUser ? (
           <div className="relative">
