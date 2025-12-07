@@ -237,12 +237,6 @@ function App() {
         />
       ) : (
         <LandingPage
-          registerForm={registerForm}
-          loginForm={loginForm}
-          onRegisterChange={handleRegisterChange}
-          onLoginChange={handleLoginChange}
-          onRegister={registerUser}
-          onLogin={loginUser}
           status={authStatus}
           error={authError}
           currentUser={currentUser}
@@ -295,7 +289,7 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
           <img
             src="/public/brand/thadasthu-logo.png"
             alt="Thadasthu logo"
-            className="h-9 w-auto sm:h-10"
+            className="h-8 w-auto sm:h-10 lg:h-12 max-h-12 object-contain flex-shrink-0"
           />
           <span className="text-base sm:text-lg">Thadasthu</span>
         </button>
@@ -359,20 +353,7 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
   );
 }
 
-function LandingPage({
-  registerForm,
-  loginForm,
-  onRegisterChange,
-  onLoginChange,
-  onRegister,
-  onLogin,
-  status,
-  error,
-  currentUser,
-  onNavigateProfile,
-  onOpenRegister,
-  onOpenLogin
-}) {
+function LandingPage({ status, error, currentUser, onNavigateProfile, onOpenRegister, onOpenLogin }) {
   return (
     <>
       <header className="bg-gradient-to-br from-white to-rose-50 border-b border-gray-100">
@@ -386,7 +367,7 @@ function LandingPage({
               Find your person with privacy-first, trusted matchmaking.
             </h1>
             <p className="text-lg text-gray-600 leading-relaxed">
-              Create a beautiful profile in minutes, explore verified members, and chat securely. Designed to feel warm, simple, and focused on what matters.
+              Create a beautiful profile in minutes, explore verified members, and chat securely. Everything flexes gracefully across desktop, tablet, and mobile so the brand always feels familiar.
             </p>
             <div className="flex flex-wrap gap-3">
               <button
@@ -411,6 +392,11 @@ function LandingPage({
                 </button>
               )}
             </div>
+            {(status || error) && (
+              <p className={`text-sm ${status ? 'text-green-700' : 'text-rose-600'}`}>
+                {status || error}
+              </p>
+            )}
           </div>
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 space-y-4">
             <div className="flex items-center gap-3">
@@ -436,34 +422,108 @@ function LandingPage({
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-12 space-y-10">
-        <div className="grid md:grid-cols-2 gap-6">
-          <AuthCard
-            title="Create your profile"
-            description="Share a few details to get personalized matches."
-            actionLabel="Create & join"
-            onSubmit={onRegister}
-            status={status}
-            error={error}
-          >
-            <RegisterForm form={registerForm} onChange={onRegisterChange} />
-          </AuthCard>
+        <section className="grid lg:grid-cols-3 gap-6 items-stretch">
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <i className="fa-solid fa-display"></i>
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Responsive by nature</p>
+                <p className="text-sm text-gray-600">Branding and layout stay polished on every device.</p>
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Crafted to look sharp on every screen.</h2>
+            <p className="text-gray-600 leading-relaxed">
+              From widescreen monitors to compact phones, the Thadasthu brand mark, typography, and cards resize smoothly so the experience always feels premium and familiar.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <ActionCard
+                icon="fa-solid fa-maximize"
+                title="Adaptive brand mark"
+                body="The logo scales with flexible heights and object-fit styling to stay crisp without crowding navigation controls."
+              />
+              <ActionCard
+                icon="fa-solid fa-mobile-screen"
+                title="Comfortable touch targets"
+                body="Buttons and chips maintain breathing room, making it easy to join or sign in from any device."
+              />
+              <ActionCard
+                icon="fa-solid fa-wand-magic-sparkles"
+                title="Consistent polish"
+                body="Gradients, shadows, and spacing align across breakpoints for a steady premium feel."
+              />
+              <ActionCard
+                icon="fa-solid fa-face-smile"
+                title="Delightful onboarding"
+                body="Start free or jump back in without clutter—modals keep the experience focused and friendly."
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <FeatureChip icon="fa-solid fa-badge-check" label="Verified profiles" />
+              <FeatureChip icon="fa-solid fa-user-shield" label="Privacy-first" />
+              <FeatureChip icon="fa-solid fa-heart" label="Warm conversations" />
+              <FeatureChip icon="fa-solid fa-laptop-mobile" label="Built for every device" />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onOpenRegister}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-3 rounded-xl shadow-sm font-semibold"
+              >
+                Start for free
+              </button>
+              {currentUser ? (
+                <button
+                  onClick={onNavigateProfile}
+                  className="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold hover:border-gray-300"
+                >
+                  Continue to your profile
+                </button>
+              ) : (
+                <button
+                  onClick={onOpenLogin}
+                  className="px-5 py-3 rounded-xl border border-gray-200 bg-white text-gray-800 font-semibold hover:border-gray-300"
+                >
+                  Quick login
+                </button>
+              )}
+            </div>
+          </div>
 
-          <AuthCard
-            title="Welcome back"
-            description="Log in securely to continue conversations and manage matches."
-            actionLabel="Login"
-            onSubmit={onLogin}
-            status={status}
-            error={error}
-          >
-            <LoginForm form={loginForm} onChange={onLoginChange} />
-          </AuthCard>
-        </div>
+          <div className="rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-6 space-y-5">
+            <div className="flex items-center gap-3">
+              <span className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <i className="fa-solid fa-wave-square"></i>
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Always balanced</p>
+                <p className="text-sm text-gray-300">Navigation and branding breathe with the viewport.</p>
+              </div>
+            </div>
+            <ul className="space-y-3 text-sm text-gray-200">
+              <li className="flex items-start gap-2">
+                <i className="fa-solid fa-check text-rose-200 mt-0.5"></i>
+                <span>Logo and typography scale smoothly from mobile to ultra-wide layouts.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <i className="fa-solid fa-check text-rose-200 mt-0.5"></i>
+                <span>Cards and chips stay legible with balanced padding and object-fit images.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <i className="fa-solid fa-check text-rose-200 mt-0.5"></i>
+                <span>CTA buttons remain easy to reach whether you're tapping or clicking.</span>
+              </li>
+            </ul>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-200">
+              "Everything feels calm and consistent—no matter which device we open it on."
+            </div>
+          </div>
+        </section>
 
         <div className="grid md:grid-cols-3 gap-4">
           <HighlightCard icon="fa-solid fa-lock" title="Safety-first" body="We never show your number or email. Share only when you are ready." />
           <HighlightCard icon="fa-solid fa-star" title="Quality community" body="Every profile is screened to keep the platform respectful and genuine." />
-          <HighlightCard icon="fa-solid fa-seedling" title="Grows with you" body="Update your story anytime. Your dashboard keeps everything organised." />
+          <HighlightCard icon="fa-solid fa-laptop" title="Responsive by default" body="Navigation, cards, and brand moments flex beautifully across breakpoints." />
         </div>
       </main>
     </>
@@ -815,26 +875,6 @@ function Modal({ title, description, children, onClose, onSubmit, actionLabel })
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function AuthCard({ title, description, children, actionLabel, onSubmit, status, error }) {
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-        <p className="text-sm text-gray-600">{description}</p>
-      </div>
-      <div className="space-y-3">{children}</div>
-      <button
-        onClick={onSubmit}
-        className="w-full inline-flex justify-center items-center gap-2 bg-rose-500 hover:bg-rose-600 text-white px-4 py-3 rounded-xl font-semibold"
-      >
-        {actionLabel}
-      </button>
-      {status && <p className="text-green-600 text-sm">{status}</p>}
-      {error && <p className="text-rose-600 text-sm">{error}</p>}
     </div>
   );
 }
