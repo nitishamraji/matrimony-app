@@ -40,75 +40,6 @@ const defaultBrowseFilters = {
   compatibility: '80+'
 };
 
-const browseProfiles = [
-  {
-    name: 'Nisha Mehta',
-    age: 27,
-    city: 'Bengaluru',
-    religion: 'Hindu',
-    occupation: 'Product Designer',
-    compatibility: 92,
-    badge: 'Active now',
-    tags: ['Vegetarian', 'Loves design'],
-    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    name: 'Shruti Rao',
-    age: 29,
-    city: 'Hyderabad',
-    religion: 'Hindu',
-    occupation: 'Software Engineer',
-    compatibility: 85,
-    badge: 'Premium',
-    tags: ['Open to relocate', 'Classical music'],
-    image: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    name: 'Tanvi Shah',
-    age: 26,
-    city: 'Mumbai',
-    religion: 'Jain',
-    occupation: 'Consultant',
-    compatibility: 78,
-    badge: 'Recently joined',
-    tags: ['Family oriented', 'Vegetarian'],
-    image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    name: 'Aparna Iyer',
-    age: 30,
-    city: 'Bengaluru',
-    religion: 'Hindu',
-    occupation: 'Product Manager',
-    compatibility: 88,
-    badge: 'Verified',
-    tags: ['Reads nonfiction', 'Pet friendly'],
-    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    name: 'Keerthi Menon',
-    age: 28,
-    city: 'Chennai',
-    religion: 'Christian',
-    occupation: 'Architect',
-    compatibility: 83,
-    badge: 'Recommended',
-    tags: ['Beach lover', 'Minimalist'],
-    image: 'https://images.unsplash.com/photo-1494797705448-171c1656553c?auto=format&fit=crop&w=400&q=80'
-  },
-  {
-    name: 'Divya Singh',
-    age: 25,
-    city: 'Delhi NCR',
-    religion: 'Hindu',
-    occupation: 'Data Analyst',
-    compatibility: 81,
-    badge: 'Active now',
-    tags: ['Early riser', 'Gym enthusiast'],
-    image: 'https://images.unsplash.com/photo-1502764613149-7f1d229e230f?auto=format&fit=crop&w=400&q=80'
-  }
-];
-
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
   const [registerForm, setRegisterForm] = useState(defaultRegisterForm);
@@ -123,6 +54,11 @@ function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [browseFilters, setBrowseFilters] = useState(defaultBrowseFilters);
+  const [recommendedMatches, setRecommendedMatches] = useState([]);
+  const [shortlistedMatches, setShortlistedMatches] = useState([]);
+  const [browseMatches, setBrowseMatches] = useState([]);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [matchesError, setMatchesError] = useState('');
 
   useEffect(() => {
     const handlePopState = () => setRoute(window.location.pathname);
@@ -165,6 +101,23 @@ function App() {
     }
   }, [currentUser, route]);
 
+  useEffect(() => {
+    if (currentUser) {
+      fetchRecommendedMatches(currentUser.id);
+      fetchBrowseMatches(defaultBrowseFilters, currentUser.id);
+    } else {
+      setRecommendedMatches([]);
+      setShortlistedMatches([]);
+      setBrowseMatches([]);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser && route === '/browse') {
+      fetchBrowseMatches(browseFilters, currentUser.id);
+    }
+  }, [browseFilters, currentUser, route]);
+
   const handleRegisterChange = (e) => {
     const { name, value } = e.target;
     setRegisterForm((prev) => ({ ...prev, [name]: value }));
@@ -178,6 +131,54 @@ function App() {
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfileForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchRecommendedMatches = async (userId) => {
+    if (!userId) return;
+    try {
+      setMatchesError('');
+      const res = await fetch(`/api/matches/recommended?userId=${userId}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to load recommended matches');
+      }
+
+      setRecommendedMatches(data.matches || []);
+      setShortlistedMatches((data.matches || []).slice(0, 2));
+    } catch (err) {
+      setMatchesError(err.message);
+    }
+  };
+
+  const fetchBrowseMatches = async (filtersToUse = browseFilters, userId = currentUser?.id) => {
+    if (!userId) return;
+
+    setMatchesError('');
+    setBrowseLoading(true);
+
+    try {
+      const params = new URLSearchParams({ userId });
+      if (filtersToUse.ageRange && filtersToUse.ageRange !== 'Any') params.append('ageRange', filtersToUse.ageRange);
+      if (filtersToUse.city && filtersToUse.city !== 'Any') params.append('city', filtersToUse.city);
+      if (filtersToUse.religion && filtersToUse.religion !== 'Any') params.append('religion', filtersToUse.religion);
+      if (filtersToUse.occupation && filtersToUse.occupation !== 'Any') params.append('occupation', filtersToUse.occupation);
+      if (filtersToUse.compatibility && filtersToUse.compatibility !== 'Any')
+        params.append('compatibility', filtersToUse.compatibility);
+
+      const res = await fetch(`/api/profiles?${params.toString()}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to load profiles');
+      }
+
+      setBrowseMatches(data.profiles || []);
+    } catch (err) {
+      setMatchesError(err.message);
+    } finally {
+      setBrowseLoading(false);
+    }
   };
 
   const registerUser = async () => {
@@ -205,6 +206,8 @@ function App() {
 
       setCurrentUser(data.user);
       setProfile(data.profile);
+      fetchRecommendedMatches(data.user.id);
+      fetchBrowseMatches(defaultBrowseFilters, data.user.id);
       setAuthStatus('Profile created! You are now signed in.');
       navigate('/home');
       setShowRegisterModal(false);
@@ -234,6 +237,8 @@ function App() {
 
       setCurrentUser(data.user);
       setProfile(data.profile);
+      fetchRecommendedMatches(data.user.id);
+      fetchBrowseMatches(defaultBrowseFilters, data.user.id);
       setAuthStatus('Logged in successfully.');
       navigate('/home');
       setShowLoginModal(false);
@@ -252,6 +257,10 @@ function App() {
     setProfileError('');
     setRegisterForm(defaultRegisterForm);
     setLoginForm(defaultLoginForm);
+    setBrowseMatches([]);
+    setRecommendedMatches([]);
+    setShortlistedMatches([]);
+    setMatchesError('');
     navigate('/', { replace: true });
   };
 
@@ -316,6 +325,9 @@ function App() {
             currentUser={currentUser}
             profile={profile}
             profileBadges={profileBadges}
+            recommendedMatches={recommendedMatches}
+            shortlistedMatches={shortlistedMatches}
+            matchesError={matchesError}
             onNavigateProfile={() => navigate('/profile')}
           />
         ) : route === '/browse' ? (
@@ -323,6 +335,9 @@ function App() {
             filters={browseFilters}
             onFilterChange={setBrowseFilters}
             onResetFilters={() => setBrowseFilters(defaultBrowseFilters)}
+            matches={browseMatches}
+            loading={browseLoading}
+            error={matchesError}
             onNavigateProfile={() => navigate('/profile')}
           />
         ) : (
@@ -677,25 +692,20 @@ function LandingPage({ status, error, currentUser, onNavigateProfile, onOpenRegi
   );
 }
 
-function BrowsePage({ filters, onFilterChange, onResetFilters, onNavigateProfile }) {
+function BrowsePage({ filters, onFilterChange, onResetFilters, onNavigateProfile, matches, loading, error }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProfiles = useMemo(() => {
-    const [minAge, maxAge] =
-      filters.ageRange !== 'Any' ? filters.ageRange.split('-').map((value) => Number(value)) : [null, null];
-    const minCompatibility = filters.compatibility !== 'Any' ? Number(filters.compatibility.replace('+', '')) : null;
+    const normalizedMatches = [...(matches || [])].sort(
+      (a, b) => (b.compatibilityScore || 0) - (a.compatibilityScore || 0)
+    );
 
-    return browseProfiles.filter((profile) => {
-      if (filters.city !== 'Any' && profile.city !== filters.city) return false;
-      if (filters.religion !== 'Any' && profile.religion !== filters.religion) return false;
-      if (filters.occupation !== 'Any' && !profile.occupation.toLowerCase().includes(filters.occupation.toLowerCase()))
-        return false;
-      if (minAge && maxAge && (profile.age < minAge || profile.age > maxAge)) return false;
-      if (minCompatibility && profile.compatibility < minCompatibility) return false;
-      if (searchTerm && !profile.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      return true;
-    });
-  }, [filters, searchTerm]);
+    if (!searchTerm) return normalizedMatches;
+
+    return normalizedMatches.filter((profile) =>
+      profile.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [matches, searchTerm]);
 
   const handleFilterChange = (key, value) => {
     onFilterChange((prev) => ({ ...prev, [key]: value }));
@@ -845,6 +855,14 @@ function BrowsePage({ filters, onFilterChange, onResetFilters, onNavigateProfile
             </div>
           </div>
 
+          {error && (
+            <div className="rounded-xl border border-rose-100 bg-rose-50 text-rose-800 p-4 text-sm">{error}</div>
+          )}
+
+          {loading && (
+            <div className="rounded-xl border border-gray-100 bg-white p-4 text-sm text-gray-700">Loading matches...</div>
+          )}
+
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredProfiles.map((profile) => (
               <MatchCard
@@ -866,77 +884,18 @@ function BrowsePage({ filters, onFilterChange, onResetFilters, onNavigateProfile
   );
 }
 
-function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
-  const recommendedMatches = [
-    {
-      name: 'Aisha Verma',
-      age: 27,
-      city: 'Bengaluru',
-      occupation: 'Product Designer',
-      height: "5'4\"",
-      compatibility: '92% match',
-      badge: 'Recommended',
-      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      name: 'Ritika Sharma',
-      age: 26,
-      city: 'Pune',
-      occupation: 'Data Analyst',
-      height: "5'3\"",
-      compatibility: '88% match',
-      badge: 'Active now',
-      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=60'
-    },
-    {
-      name: 'Sneha Rao',
-      age: 28,
-      city: 'Hyderabad',
-      occupation: 'Marketing Lead',
-      height: "5'5\"",
-      compatibility: '86% match',
-      badge: 'Recently joined',
-      image: 'https://images.unsplash.com/photo-1494797705448-171c1656553c?auto=format&fit=crop&w=400&q=80'
-    }
-  ];
-
-  const shortlisted = [
-    {
-      name: 'Ananya Pillai',
-      age: 27,
-      city: 'Chennai',
-      occupation: 'Architect',
-      compatibility: 'Shortlisted',
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      name: 'Divya Singh',
-      age: 25,
-      city: 'Delhi NCR',
-      occupation: 'Consultant',
-      compatibility: 'Good vibe',
-      image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80'
-    }
-  ];
-
-  const recentlyViewed = [
-    {
-      name: 'Aparna Iyer',
-      age: 29,
-      city: 'Mumbai',
-      occupation: 'Entrepreneur',
-      compatibility: 'Revisit',
-      image: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      name: 'Meera Kapoor',
-      age: 30,
-      city: 'Kochi',
-      occupation: 'Doctor',
-      compatibility: 'Similar interests',
-      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=60'
-    }
-  ];
+function HomePage({
+  currentUser,
+  profile,
+  profileBadges,
+  recommendedMatches,
+  shortlistedMatches,
+  matchesError,
+  onNavigateProfile
+}) {
+  const recommendedList = recommendedMatches?.length ? recommendedMatches : [];
+  const shortlisted = shortlistedMatches?.length ? shortlistedMatches : recommendedList.slice(0, 2);
+  const recentlyViewed = recommendedList.slice(2, 5);
 
   const profileReminders = [
     { label: 'Add a short bio', done: Boolean(profile?.about) },
@@ -994,10 +953,17 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
               </div>
               <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold">New</span>
             </div>
+            {matchesError && <p className="text-sm text-rose-600">{matchesError}</p>}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recommendedMatches.map((item) => (
+              {recommendedList.map((item) => (
                 <MatchCard key={item.name} profile={item} />
               ))}
+              {recommendedList.length === 0 && !matchesError && (
+                <div className="col-span-full rounded-xl border border-amber-100 bg-amber-50 text-amber-900 p-4 text-sm">
+                  <p className="font-semibold">Add more details to see curated matches.</p>
+                  <p className="text-amber-800">Complete your profile and refresh to view recommendations.</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -1010,6 +976,11 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
               {shortlisted.map((item) => (
                 <MatchCard key={item.name} profile={item} ctaLabel="Send interest" />
               ))}
+              {shortlisted.length === 0 && (
+                <div className="col-span-full rounded-xl border border-gray-100 bg-gray-50 text-gray-700 p-4 text-sm">
+                  No shortlisted matches yet. Open a profile to shortlist it.
+                </div>
+              )}
             </div>
           </section>
 
@@ -1022,6 +993,11 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
               {recentlyViewed.map((item) => (
                 <MatchCard key={item.name} profile={item} ctaLabel="Reopen" />
               ))}
+              {recentlyViewed.length === 0 && (
+                <div className="col-span-full rounded-xl border border-gray-100 bg-gray-50 text-gray-700 p-4 text-sm">
+                  Browse a few profiles to see them appear here.
+                </div>
+              )}
             </div>
           </section>
 

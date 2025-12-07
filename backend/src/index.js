@@ -23,6 +23,57 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
+function deriveBadge(profile) {
+  const hoursSinceActive = (Date.now() - new Date(profile.lastActive).getTime()) / (1000 * 60 * 60);
+
+  if (hoursSinceActive < 2) return 'Active now';
+  if (hoursSinceActive < 24) return 'Recently active';
+  if (profile.education) return 'Verified career';
+  return 'Recently joined';
+}
+
+function computeCompatibility(viewerProfile, candidateProfile) {
+  if (!viewerProfile) {
+    return 70 + Math.floor(Math.random() * 15);
+  }
+
+  let score = 60;
+
+  if (viewerProfile.city && candidateProfile.city && viewerProfile.city === candidateProfile.city) score += 10;
+  if (viewerProfile.religion && candidateProfile.religion && viewerProfile.religion === candidateProfile.religion) score += 10;
+  if (viewerProfile.motherTongue && candidateProfile.motherTongue && viewerProfile.motherTongue === candidateProfile.motherTongue)
+    score += 5;
+  if (viewerProfile.occupation && candidateProfile.occupation && candidateProfile.occupation.includes(viewerProfile.occupation))
+    score += 4;
+
+  if (viewerProfile.age && candidateProfile.age) {
+    const ageDiff = Math.abs(viewerProfile.age - candidateProfile.age);
+    if (ageDiff <= 2) score += 6;
+    else if (ageDiff <= 5) score += 3;
+    else score -= 2;
+  }
+
+  score += Math.floor(Math.random() * 6);
+  return Math.max(55, Math.min(score, 96));
+}
+
+function mapProfileForResponse(profile, viewerProfile) {
+  const compatibilityScore = computeCompatibility(viewerProfile, profile);
+  return {
+    id: profile.userId,
+    name: profile.user.fullName,
+    age: profile.age,
+    city: profile.city || '—',
+    religion: profile.religion || '—',
+    occupation: profile.occupation || '—',
+    height: profile.height || undefined,
+    image: profile.imageUrl || 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80',
+    compatibility: `${compatibilityScore}% match`,
+    compatibilityScore,
+    badge: deriveBadge(profile)
+  };
+}
+
 app.post('/api/auth/register', async (req, res) => {
   const { email, password, fullName, age, gender, city } = req.body;
 
@@ -163,6 +214,83 @@ app.put('/api/profile/:userId', async (req, res) => {
   } catch (error) {
     console.error('Failed to update profile', error);
     res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+app.get('/api/profiles', async (req, res) => {
+  const { ageRange, city, religion, occupation, compatibility, userId } = req.query;
+
+  try {
+    const viewerId = userId ? Number(userId) : null;
+    const viewerProfile = viewerId
+      ? await prisma.profile.findUnique({ where: { userId: viewerId }, include: { user: true } })
+      : null;
+
+    let profiles = await prisma.profile.findMany({ include: { user: true } });
+
+    if (viewerId) {
+      profiles = profiles.filter((profile) => profile.userId !== viewerId);
+    }
+
+    if (ageRange && ageRange !== 'Any') {
+      const [minAge, maxAge] = ageRange.split('-').map((value) => Number(value));
+      profiles = profiles.filter((profile) => profile.age && profile.age >= minAge && profile.age <= maxAge);
+    }
+
+    if (city && city !== 'Any') {
+      profiles = profiles.filter((profile) => profile.city === city);
+    }
+
+    if (religion && religion !== 'Any') {
+      profiles = profiles.filter((profile) => profile.religion === religion);
+    }
+
+    if (occupation && occupation !== 'Any') {
+      profiles = profiles.filter(
+        (profile) => profile.occupation && profile.occupation.toLowerCase().includes(occupation.toLowerCase())
+      );
+    }
+
+    const results = profiles
+      .map((profile) => mapProfileForResponse(profile, viewerProfile))
+      .filter((profile) => {
+        if (!compatibility || compatibility === 'Any') return true;
+        const threshold = Number(String(compatibility).replace('+', ''));
+        return profile.compatibilityScore >= threshold;
+      });
+
+    res.json({ profiles: results });
+  } catch (error) {
+    console.error('Failed to fetch profiles', error);
+    res.status(500).json({ error: 'Failed to fetch profiles' });
+  }
+});
+
+app.get('/api/matches/recommended', async (req, res) => {
+  const userId = Number(req.query.userId);
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User id is required' });
+  }
+
+  try {
+    const viewerProfile = await prisma.profile.findUnique({ where: { userId }, include: { user: true } });
+
+    if (!viewerProfile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    const profiles = await prisma.profile.findMany({ include: { user: true } });
+    const candidates = profiles
+      .filter((profile) => profile.userId !== userId && profile.gender !== viewerProfile.gender)
+      .map((profile) => mapProfileForResponse(profile, viewerProfile))
+      .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
+      .slice(0, 6);
+
+    res.json({ matches: candidates });
+  } catch (error) {
+    console.error('Failed to fetch recommended matches', error);
+    res.status(500).json({ error: 'Failed to fetch recommended matches' });
   }
 });
 
