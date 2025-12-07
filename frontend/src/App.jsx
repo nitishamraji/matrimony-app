@@ -32,6 +32,83 @@ const defaultLoginForm = {
   password: ''
 };
 
+const defaultBrowseFilters = {
+  ageRange: '25-30',
+  city: 'Bengaluru',
+  religion: 'Hindu',
+  occupation: 'Any',
+  compatibility: '80+'
+};
+
+const browseProfiles = [
+  {
+    name: 'Nisha Mehta',
+    age: 27,
+    city: 'Bengaluru',
+    religion: 'Hindu',
+    occupation: 'Product Designer',
+    compatibility: 92,
+    badge: 'Active now',
+    tags: ['Vegetarian', 'Loves design'],
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    name: 'Shruti Rao',
+    age: 29,
+    city: 'Hyderabad',
+    religion: 'Hindu',
+    occupation: 'Software Engineer',
+    compatibility: 85,
+    badge: 'Premium',
+    tags: ['Open to relocate', 'Classical music'],
+    image: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    name: 'Tanvi Shah',
+    age: 26,
+    city: 'Mumbai',
+    religion: 'Jain',
+    occupation: 'Consultant',
+    compatibility: 78,
+    badge: 'Recently joined',
+    tags: ['Family oriented', 'Vegetarian'],
+    image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    name: 'Aparna Iyer',
+    age: 30,
+    city: 'Bengaluru',
+    religion: 'Hindu',
+    occupation: 'Product Manager',
+    compatibility: 88,
+    badge: 'Verified',
+    tags: ['Reads nonfiction', 'Pet friendly'],
+    image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    name: 'Keerthi Menon',
+    age: 28,
+    city: 'Chennai',
+    religion: 'Christian',
+    occupation: 'Architect',
+    compatibility: 83,
+    badge: 'Recommended',
+    tags: ['Beach lover', 'Minimalist'],
+    image: 'https://images.unsplash.com/photo-1494797705448-171c1656553c?auto=format&fit=crop&w=400&q=80'
+  },
+  {
+    name: 'Divya Singh',
+    age: 25,
+    city: 'Delhi NCR',
+    religion: 'Hindu',
+    occupation: 'Data Analyst',
+    compatibility: 81,
+    badge: 'Active now',
+    tags: ['Early riser', 'Gym enthusiast'],
+    image: 'https://images.unsplash.com/photo-1502764613149-7f1d229e230f?auto=format&fit=crop&w=400&q=80'
+  }
+];
+
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
   const [registerForm, setRegisterForm] = useState(defaultRegisterForm);
@@ -45,6 +122,7 @@ function App() {
   const [profileError, setProfileError] = useState('');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [browseFilters, setBrowseFilters] = useState(defaultBrowseFilters);
 
   useEffect(() => {
     const handlePopState = () => setRoute(window.location.pathname);
@@ -78,8 +156,12 @@ function App() {
       navigate('/home', { replace: true });
     }
 
-    if (!currentUser && route === '/home') {
+    if (!currentUser && (route === '/home' || route === '/browse')) {
       navigate('/', { replace: true });
+    }
+
+    if (route === '/browse') {
+      setBrowseFilters(defaultBrowseFilters);
     }
   }, [currentUser, route]);
 
@@ -206,45 +288,53 @@ function App() {
   }, [profile]);
 
   return (
-    <div className="bg-gray-50 min-h-screen text-gray-800">
-      <Navbar
-        currentUser={currentUser}
-        onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
-        onNavigateProfile={() => navigate('/profile')}
-        onOpenRegister={() => setShowRegisterModal(true)}
-        onOpenLogin={() => setShowLoginModal(true)}
-        onLogout={logoutUser}
-      />
-
-      {route === '/profile' ? (
-        <ProfilePage
+      <div className="bg-gray-50 min-h-screen text-gray-800">
+        <Navbar
           currentUser={currentUser}
-          profile={profile}
-          profileForm={profileForm}
-          onProfileChange={handleProfileChange}
-          onSaveProfile={saveProfile}
-          profileBadges={profileBadges}
-          status={profileStatus}
-          error={profileError}
           onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
-        />
-      ) : route === '/home' ? (
-        <HomePage
-          currentUser={currentUser}
-          profile={profile}
-          profileBadges={profileBadges}
           onNavigateProfile={() => navigate('/profile')}
-        />
-      ) : (
-        <LandingPage
-          status={authStatus}
-          error={authError}
-          currentUser={currentUser}
-          onNavigateProfile={() => navigate('/profile')}
+          onNavigateBrowse={() => navigate('/browse')}
           onOpenRegister={() => setShowRegisterModal(true)}
           onOpenLogin={() => setShowLoginModal(true)}
+          onLogout={logoutUser}
         />
-      )}
+
+        {route === '/profile' ? (
+          <ProfilePage
+            currentUser={currentUser}
+            profile={profile}
+            profileForm={profileForm}
+            onProfileChange={handleProfileChange}
+            onSaveProfile={saveProfile}
+            profileBadges={profileBadges}
+            status={profileStatus}
+            error={profileError}
+            onNavigateHome={() => navigate(currentUser ? '/home' : '/')}
+          />
+        ) : route === '/home' ? (
+          <HomePage
+            currentUser={currentUser}
+            profile={profile}
+            profileBadges={profileBadges}
+            onNavigateProfile={() => navigate('/profile')}
+          />
+        ) : route === '/browse' ? (
+          <BrowsePage
+            filters={browseFilters}
+            onFilterChange={setBrowseFilters}
+            onResetFilters={() => setBrowseFilters(defaultBrowseFilters)}
+            onNavigateProfile={() => navigate('/profile')}
+          />
+        ) : (
+          <LandingPage
+            status={authStatus}
+            error={authError}
+            currentUser={currentUser}
+            onNavigateProfile={() => navigate('/profile')}
+            onOpenRegister={() => setShowRegisterModal(true)}
+            onOpenLogin={() => setShowLoginModal(true)}
+          />
+        )}
 
       {showRegisterModal && (
         <Modal
@@ -273,7 +363,7 @@ function App() {
   );
 }
 
-function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister, onOpenLogin, onLogout }) {
+function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onNavigateBrowse, onOpenRegister, onOpenLogin, onLogout }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const toggleMenu = () => setShowProfileMenu((prev) => !prev);
@@ -305,15 +395,15 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
             <span className="text-base sm:text-lg">Thadasthu</span>
           </button>
 
-          {currentUser && (
-            <div className="hidden md:flex items-center gap-3 text-sm font-semibold text-gray-700">
-              <button
-                onClick={() => scrollToSection('recommended-matches')}
-                className="px-3 py-2 rounded-lg hover:bg-gray-50"
-              >
-                Browse matches
-              </button>
-              <button
+            {currentUser && (
+              <div className="hidden md:flex items-center gap-3 text-sm font-semibold text-gray-700">
+                <button
+                  onClick={onNavigateBrowse}
+                  className="px-3 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Browse matches
+                </button>
+                <button
                 onClick={() => scrollToSection('shortlisted-matches')}
                 className="px-3 py-2 rounded-lg hover:bg-gray-50"
               >
@@ -584,6 +674,195 @@ function LandingPage({ status, error, currentUser, onNavigateProfile, onOpenRegi
         </div>
       </main>
     </>
+  );
+}
+
+function BrowsePage({ filters, onFilterChange, onResetFilters, onNavigateProfile }) {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredProfiles = useMemo(() => {
+    const [minAge, maxAge] =
+      filters.ageRange !== 'Any' ? filters.ageRange.split('-').map((value) => Number(value)) : [null, null];
+    const minCompatibility = filters.compatibility !== 'Any' ? Number(filters.compatibility.replace('+', '')) : null;
+
+    return browseProfiles.filter((profile) => {
+      if (filters.city !== 'Any' && profile.city !== filters.city) return false;
+      if (filters.religion !== 'Any' && profile.religion !== filters.religion) return false;
+      if (filters.occupation !== 'Any' && !profile.occupation.toLowerCase().includes(filters.occupation.toLowerCase()))
+        return false;
+      if (minAge && maxAge && (profile.age < minAge || profile.age > maxAge)) return false;
+      if (minCompatibility && profile.compatibility < minCompatibility) return false;
+      if (searchTerm && !profile.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      return true;
+    });
+  }, [filters, searchTerm]);
+
+  const handleFilterChange = (key, value) => {
+    onFilterChange((prev) => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-10 space-y-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
+          <p className="text-xs uppercase tracking-wide text-gray-500">Search</p>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Browse matches</h1>
+              <p className="text-gray-600 max-w-2xl">
+                Filters on the left auto-apply when you open this page so you immediately see focused, relevant matches.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={onResetFilters}
+                className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+              >
+                Reset to defaults
+              </button>
+              <button
+                onClick={onNavigateProfile}
+                className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600"
+              >
+                Update profile
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-700">
+          <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700">Default filters applied</span>
+          <span className="px-3 py-1 rounded-full bg-gray-100">Age: {filters.ageRange}</span>
+          <span className="px-3 py-1 rounded-full bg-gray-100">City: {filters.city}</span>
+          <span className="px-3 py-1 rounded-full bg-gray-100">Religion: {filters.religion}</span>
+          <span className="px-3 py-1 rounded-full bg-gray-100">Compatibility: {filters.compatibility}</span>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <aside className="space-y-4 lg:sticky lg:top-20">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+              <span className="text-xs font-semibold text-rose-600">Auto-applied</span>
+            </div>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</span>
+              <input
+                type="text"
+                placeholder="Search by name"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              />
+            </label>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Age</span>
+              <select
+                value={filters.ageRange}
+                onChange={(e) => handleFilterChange('ageRange', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              >
+                <option>Any</option>
+                <option>23-26</option>
+                <option>25-30</option>
+                <option>28-32</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">City</span>
+              <select
+                value={filters.city}
+                onChange={(e) => handleFilterChange('city', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              >
+                <option>Any</option>
+                <option>Bengaluru</option>
+                <option>Hyderabad</option>
+                <option>Mumbai</option>
+                <option>Chennai</option>
+                <option>Delhi NCR</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Religion</span>
+              <select
+                value={filters.religion}
+                onChange={(e) => handleFilterChange('religion', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              >
+                <option>Any</option>
+                <option>Hindu</option>
+                <option>Christian</option>
+                <option>Jain</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Occupation</span>
+              <select
+                value={filters.occupation}
+                onChange={(e) => handleFilterChange('occupation', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              >
+                <option>Any</option>
+                <option>Product</option>
+                <option>Engineering</option>
+                <option>Consulting</option>
+                <option>Architecture</option>
+                <option>Analytics</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-sm text-gray-700 block">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Compatibility</span>
+              <select
+                value={filters.compatibility}
+                onChange={(e) => handleFilterChange('compatibility', e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-200"
+              >
+                <option>Any</option>
+                <option>75+</option>
+                <option>80+</option>
+                <option>85+</option>
+                <option>90+</option>
+              </select>
+            </label>
+          </div>
+        </aside>
+
+        <section className="lg:col-span-2 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Results</p>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {filteredProfiles.length} match{filteredProfiles.length === 1 ? '' : 'es'} found
+              </h2>
+              <p className="text-sm text-gray-600">Showing cards based on your selected filters.</p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs font-semibold text-gray-700">
+              <span className="px-3 py-1 rounded-full bg-gray-100">{filters.ageRange} yrs</span>
+              <span className="px-3 py-1 rounded-full bg-gray-100">{filters.city}</span>
+              <span className="px-3 py-1 rounded-full bg-gray-100">{filters.religion}</span>
+              <span className="px-3 py-1 rounded-full bg-gray-100">{filters.compatibility} compatibility</span>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredProfiles.map((profile) => (
+              <MatchCard
+                key={profile.name}
+                profile={{ ...profile, compatibility: `${profile.compatibility}% match` }}
+                ctaLabel="View profile"
+              />
+            ))}
+            {filteredProfiles.length === 0 && (
+              <div className="col-span-full rounded-xl border border-amber-100 bg-amber-50 text-amber-900 p-5">
+                <h3 className="font-semibold">No matches found</h3>
+                <p className="text-sm mt-1">Try broadening your filters or resetting to the defaults.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
   );
 }
 
