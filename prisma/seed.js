@@ -1,6 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
 import crypto from 'crypto';
 
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 function hashPassword(password) {
