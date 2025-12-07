@@ -293,7 +293,7 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
           onClick={onNavigateHome}
         >
           <img
-            src="/public/brand/thadasthu-logo.svg"
+            src="/public/brand/thadasthu-logo.png"
             alt="Thadasthu logo"
             className="h-9 w-auto sm:h-10"
           />
