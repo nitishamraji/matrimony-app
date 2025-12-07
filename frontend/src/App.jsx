@@ -279,58 +279,115 @@ function Navbar({ currentUser, onNavigateHome, onNavigateProfile, onOpenRegister
   const toggleMenu = () => setShowProfileMenu((prev) => !prev);
   const closeMenu = () => setShowProfileMenu(false);
 
+  const scrollToSection = (id) => {
+    onNavigateHome();
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  };
+
   return (
     <nav className="bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <button
-          className="flex items-center gap-3 text-gray-900 font-semibold text-lg"
-          onClick={onNavigateHome}
-        >
-          <img
-            src="/public/brand/thadasthu-logo.png"
-            alt="Thadasthu logo"
-            className="h-8 w-auto sm:h-10 lg:h-12 max-h-12 object-contain flex-shrink-0"
-          />
-          <span className="text-base sm:text-lg">Thadasthu</span>
-        </button>
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
+          <button
+            className="flex items-center gap-3 text-gray-900 font-semibold text-lg"
+            onClick={onNavigateHome}
+          >
+            <img
+              src="/public/brand/thadasthu-logo.png"
+              alt="Thadasthu logo"
+              className="h-8 w-auto sm:h-10 lg:h-12 max-h-12 object-contain flex-shrink-0"
+            />
+            <span className="text-base sm:text-lg">Thadasthu</span>
+          </button>
+
+          {currentUser && (
+            <div className="hidden md:flex items-center gap-3 text-sm font-semibold text-gray-700">
+              <button
+                onClick={() => scrollToSection('recommended-matches')}
+                className="px-3 py-2 rounded-lg hover:bg-gray-50"
+              >
+                Browse matches
+              </button>
+              <button
+                onClick={() => scrollToSection('shortlisted-matches')}
+                className="px-3 py-2 rounded-lg hover:bg-gray-50"
+              >
+                Shortlisted
+              </button>
+              <button
+                onClick={() => scrollToSection('messages-hint')}
+                className="px-3 py-2 rounded-lg hover:bg-gray-50"
+              >
+                Messages
+              </button>
+            </div>
+          )}
+        </div>
+
         {currentUser ? (
-          <div className="relative">
-            <button
-              onClick={toggleMenu}
-              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm hover:border-gray-300"
-            >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold">
-                {currentUser.fullName?.charAt(0) || 'P'}
-              </div>
-              <span className="hidden sm:inline">Profile</span>
-              <i className="fa-solid fa-chevron-down text-xs text-gray-500"></i>
+          <div className="flex items-center gap-3">
+            <button className="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-rose-100 bg-rose-50 text-rose-700 font-semibold hover:border-rose-200">
+              <i className="fa-solid fa-crown text-sm"></i>
+              Upgrade
             </button>
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white shadow-lg">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-xs text-gray-500">Signed in</p>
-                  <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.fullName}</p>
+            <div className="relative">
+              <button
+                onClick={toggleMenu}
+                className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm hover:border-gray-300"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-rose-700 font-bold">
+                  {currentUser.fullName?.charAt(0) || 'P'}
                 </div>
-                <button
-                  onClick={() => {
-                    closeMenu();
-                    onNavigateProfile();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  View profile
-                </button>
-                <button
-                  onClick={() => {
-                    closeMenu();
-                    onLogout();
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50"
-                >
-                  Sign out
-                </button>
-              </div>
-            )}
+                <span className="hidden sm:inline">You</span>
+                <i className="fa-solid fa-chevron-down text-xs text-gray-500"></i>
+              </button>
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-100 bg-white shadow-lg">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-xs text-gray-500">Signed in</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{currentUser.fullName}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onNavigateProfile();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    View profile
+                  </button>
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onNavigateProfile();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    Edit profile
+                  </button>
+                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    Partner preferences
+                  </button>
+                  <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    Account settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      onLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 border-t border-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-3">
@@ -531,7 +588,78 @@ function LandingPage({ status, error, currentUser, onNavigateProfile, onOpenRegi
 }
 
 function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
-  const completionHints = [
+  const recommendedMatches = [
+    {
+      name: 'Aisha Verma',
+      age: 27,
+      city: 'Bengaluru',
+      occupation: 'Product Designer',
+      height: "5'4\"",
+      compatibility: '92% match',
+      badge: 'Recommended',
+      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=80'
+    },
+    {
+      name: 'Ritika Sharma',
+      age: 26,
+      city: 'Pune',
+      occupation: 'Data Analyst',
+      height: "5'3\"",
+      compatibility: '88% match',
+      badge: 'Active now',
+      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=60'
+    },
+    {
+      name: 'Sneha Rao',
+      age: 28,
+      city: 'Hyderabad',
+      occupation: 'Marketing Lead',
+      height: "5'5\"",
+      compatibility: '86% match',
+      badge: 'Recently joined',
+      image: 'https://images.unsplash.com/photo-1494797705448-171c1656553c?auto=format&fit=crop&w=400&q=80'
+    }
+  ];
+
+  const shortlisted = [
+    {
+      name: 'Ananya Pillai',
+      age: 27,
+      city: 'Chennai',
+      occupation: 'Architect',
+      compatibility: 'Shortlisted',
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'
+    },
+    {
+      name: 'Divya Singh',
+      age: 25,
+      city: 'Delhi NCR',
+      occupation: 'Consultant',
+      compatibility: 'Good vibe',
+      image: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=400&q=80'
+    }
+  ];
+
+  const recentlyViewed = [
+    {
+      name: 'Aparna Iyer',
+      age: 29,
+      city: 'Mumbai',
+      occupation: 'Entrepreneur',
+      compatibility: 'Revisit',
+      image: 'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'
+    },
+    {
+      name: 'Meera Kapoor',
+      age: 30,
+      city: 'Kochi',
+      occupation: 'Doctor',
+      compatibility: 'Similar interests',
+      image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=400&q=60'
+    }
+  ];
+
+  const profileReminders = [
     { label: 'Add a short bio', done: Boolean(profile?.about) },
     { label: 'Share your city', done: Boolean(profile?.city) },
     { label: 'Update career details', done: Boolean(profile?.occupation) }
@@ -555,10 +683,10 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
     <div className="max-w-6xl mx-auto px-4 py-10 space-y-8">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-sm text-gray-500">Welcome,</p>
-          <h1 className="text-3xl font-bold text-gray-900">{currentUser.fullName}</h1>
+          <p className="text-sm text-gray-500">Matches hub</p>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {currentUser.fullName}</h1>
           <p className="text-gray-600 mt-2 max-w-2xl">
-            This is your private home base for Thadasthu. Review your story, keep details polished, and move to your profile when you’re ready to meet matches.
+            Your feed opens right on recommended matches. Jump into shortlisted or revisit recent profiles without losing your spot.
           </p>
         </div>
         <div className="flex gap-3">
@@ -566,31 +694,88 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
             onClick={onNavigateProfile}
             className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600"
           >
-            View your profile
+            View profile
           </button>
           <button
             onClick={onNavigateProfile}
             className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:border-gray-300"
           >
-            Update details
+            Edit details
           </button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <ProfilePreview currentUser={currentUser} profile={profile} profileBadges={profileBadges} />
-
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+          <section id="recommended-matches" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Profile quality</p>
-                <h3 className="text-lg font-semibold text-gray-900">Keep it professional and complete</h3>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Recommended</p>
+                <h2 className="text-xl font-semibold text-gray-900">Matches curated for you</h2>
               </div>
-              <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold">Members-first</span>
+              <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-semibold">New</span>
             </div>
-            <div className="grid md:grid-cols-3 gap-3">
-              {completionHints.map((hint) => (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recommendedMatches.map((item) => (
+                <MatchCard key={item.name} profile={item} />
+              ))}
+            </div>
+          </section>
+
+          <section id="shortlisted-matches" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Shortlisted</h2>
+              <button className="text-sm font-semibold text-rose-600 hover:text-rose-700">View all</button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {shortlisted.map((item) => (
+                <MatchCard key={item.name} profile={item} ctaLabel="Send interest" />
+              ))}
+            </div>
+          </section>
+
+          <section id="recently-viewed" className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Recently viewed</h2>
+              <span className="text-sm text-gray-500">Pick up where you left</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {recentlyViewed.map((item) => (
+                <MatchCard key={item.name} profile={item} ctaLabel="Reopen" />
+              ))}
+            </div>
+          </section>
+
+          <section
+            id="messages-hint"
+            className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 flex items-center justify-between gap-4"
+          >
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide text-gray-500">Messages</p>
+              <h3 className="text-lg font-semibold text-gray-900">Keep conversations moving</h3>
+              <p className="text-sm text-gray-600">
+                Replies stay visible here. Respond quickly to keep recommended matches warmed up.
+              </p>
+            </div>
+            <button className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600">Open inbox</button>
+          </section>
+        </div>
+
+        <div className="space-y-4">
+          <ProfilePreview currentUser={currentUser} profile={profile} profileBadges={profileBadges} />
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Profile readiness</h3>
+              <button
+                onClick={onNavigateProfile}
+                className="text-sm font-semibold text-rose-600 hover:text-rose-700"
+              >
+                Edit profile
+              </button>
+            </div>
+            <div className="grid gap-3">
+              {profileReminders.map((hint) => (
                 <div
                   key={hint.label}
                   className={`rounded-xl border p-3 text-sm flex items-start gap-3 ${
@@ -611,11 +796,11 @@ function HomePage({ currentUser, profile, profileBadges, onNavigateProfile }) {
                 onClick={onNavigateProfile}
                 className="text-sm font-semibold text-rose-600 hover:text-rose-700"
               >
-                Go to profile
+                Update details
               </button>
             </div>
-            <p className="text-gray-600 text-sm">Focus on the actions that help you appear in better recommendations.</p>
-            <div className="grid md:grid-cols-2 gap-3">
+            <p className="text-gray-600 text-sm">Actions that help you appear in better recommendations.</p>
+            <div className="grid gap-3">
               <ActionCard
                 icon="fa-solid fa-pen"
                 title="Refresh your introduction"
@@ -683,9 +868,16 @@ function ProfilePage({
             onClick={onSaveProfile}
             className="px-4 py-2 rounded-lg bg-rose-500 text-white font-semibold hover:bg-rose-600"
           >
-            Save profile
+          Save profile
           </button>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-amber-100 bg-amber-50 text-amber-900 px-4 py-3 text-sm flex items-start gap-3">
+        <i className="fa-solid fa-pen-to-square mt-0.5"></i>
+        <p>
+          Keep your profile crisp for better matches. Use the form below to edit details, then return to the matches tab from the navbar when you are done.
+        </p>
       </div>
 
       {status && <p className="text-green-600 text-sm">{status}</p>}
@@ -1030,6 +1222,38 @@ function FormField({ label, name, type = 'text', placeholder, value, onChange, a
         />
       )}
     </label>
+  );
+}
+
+function MatchCard({ profile, ctaLabel = 'View profile' }) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white shadow-sm overflow-hidden flex flex-col">
+      <div className="relative h-32 w-full bg-gradient-to-br from-rose-100 to-rose-50">
+        <img src={profile.image} alt={profile.name} className="h-full w-full object-cover" />
+        {profile.badge && (
+          <span className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold rounded-full bg-white/90 text-rose-700">
+            {profile.badge}
+          </span>
+        )}
+      </div>
+      <div className="p-4 space-y-2 flex-1">
+        <div className="flex items-center justify-between">
+          <p className="font-semibold text-gray-900">{profile.name}</p>
+          {profile.compatibility && <span className="text-xs font-semibold text-rose-600">{profile.compatibility}</span>}
+        </div>
+        <p className="text-sm text-gray-600">
+          {profile.age} yrs · {profile.city}
+        </p>
+        <p className="text-sm text-gray-700 font-medium">{profile.occupation}</p>
+        {profile.height && <p className="text-xs text-gray-500">Height: {profile.height}</p>}
+      </div>
+      <div className="px-4 pb-4">
+        <button className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 text-white text-sm font-semibold px-3 py-2 hover:bg-gray-800">
+          <i className="fa-solid fa-eye"></i>
+          {ctaLabel}
+        </button>
+      </div>
+    </div>
   );
 }
 
